@@ -1,6 +1,6 @@
 # BlazorApp
 
-O BlazorApp é um sistema de controle de tarefas desenvolvido em Blazor utilizando o Visual Studio com .NET 8.
+O BlazorApp é um sistema em Blazor utilizando o Visual Studio com .NET 8.
 
 ## Pré-requisitos
 
