@@ -1,0 +1,128 @@
+﻿@** Definir a rota desta página *@
+@page "/criar-usuario"
+
+@using BlazorApp.Response
+@using BlazorApp.Responses
+@using BlazorApp.ViewModels
+
+@inject HttpClient Http
+
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-center">
+                    <h2>Criar Conta de Usuários</h2>
+                    <p>Preencha seus dados para criar uma conta.</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(mensagemSucesso))
+                {
+                    <div class="alert alert-success">
+                        <strong>@mensagemSucesso</strong>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(mensagemErro))
+                {
+                    <div class="alert alert-danger">
+                        <strong>@mensagemErro</strong>
+                    </div>
+                }
+
+
+                <EditForm Model="@viewModel" OnValidSubmit="@OnSubmit">
+
+                    <DataAnnotationsValidator/>
+
+                    <div class="mb-2">
+                        <label>Nome do usuário:</label>
+                        <InputText class="form-control" @bind-Value="viewModel.Nome"/>
+                        <div class="text-danger">
+                            <ValidationMessage For="@(() => viewModel.Nome)" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Email do usuário:</label>
+                        <InputText class="form-control" @bind-Value="viewModel.Email" />
+                        <div class="text-danger">
+                            <ValidationMessage For="@(() => viewModel.Email)" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Senha do usuário:</label>
+                        <InputText class="form-control" @bind-Value="viewModel.Senha" type="password" />
+                        <div class="text-danger">
+                            <ValidationMessage For="@(() => viewModel.Senha)" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Confirme a senha:</label>
+                        <InputText class="form-control" @bind-Value="viewModel.SenhaConfirmacao" type="password" />
+                        <div class="text-danger">
+                            <ValidationMessage For="@(() => viewModel.SenhaConfirmacao)" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2 d-grid">
+                        <input type="submit" class="btn btn-primary" value="Realizar Cadastro"/>
+                    </div>
+
+                    <div class="mb-2 d-grid">
+                        <a href="/" class="btn btn-light">
+                            Já possui conta? <strong>Acesse aqui.</strong>
+                        </a>
+                    </div>
+
+                </EditForm>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? mensagemSucesso;
+    private string? mensagemErro;
+
+
+    //declarar a classe VIEWMODEL utilizada por esta página
+    private CriarUsuarioViewModel viewModel = new CriarUsuarioViewModel();
+
+    //função para capturar o evento de SUBMIT do formulário
+    protected async Task OnSubmit()
+    {
+        mensagemSucesso = string.Empty;
+        mensagemErro = string.Empty;
+       
+        try
+        {
+            //fazendo a chamada para o ENDPOINT de criação de usuário da API
+            var result = await Http.PostAsJsonAsync("criar", viewModel);
+            //verificando se a resposta obteve sucesso
+            if (result.IsSuccessStatusCode)
+            {
+                //lendo e exibindo resultado de sucesso
+                var response = result.Content.ReadFromJsonAsync<CriarUsuarioResponse>().Result;
+                mensagemSucesso = response?.Message;
+
+                //limpando os campos do formulário
+                viewModel = new CriarUsuarioViewModel();
+            }
+            else
+            {
+                //lendo e exibindo mensagem de erro
+                var response = result.Content.ReadFromJsonAsync<ErrorResponse>().Result;
+                mensagemErro = response?.Message;
+            }
+        }
+
+        catch(Exception e)
+        {
+            mensagemErro = e.Message;
+
+        }
+    }
+}
