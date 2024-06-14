@@ -1,4 +1,8 @@
-﻿@inherits LayoutComponentBase
+﻿@using BlazorApp.Services
+@inherits LayoutComponentBase
+@inject AuthService Auth
+
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -6,7 +10,12 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            @if(!string.IsNullOrEmpty(nome) && !string.IsNullOrEmpty(email))
+            {
+                <div> 
+                    Usuário autenticado: <strong>@nome | @email</strong>
+                </div>
+            }
         </div>
 
         <article class="content px-4">
@@ -14,3 +23,20 @@
         </article>
     </main>
 </div>
+
+@code{
+
+    private string? nome;
+    private string? email;
+
+    protected override async Task OnInitializedAsync(){
+        var usuario = await Auth.GetData();
+
+        if (usuario != null)
+        {
+            nome = usuario.Nome;
+            email = usuario.Email;
+        }
+
+    }
+}

@@ -1,0 +1,195 @@
+﻿@page "/consultar-tarefas"
+@using BlazorApp.Response
+@using BlazorApp.Settings
+@using BlazorApp.ViewModels
+
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="card m-3">
+    <div class="card-body">
+        <h2>Consulta de tarefas</h2>
+        <p>Consulte as tarefas da sua agenda de acordo com um período de datas.</p>
+
+        @if (!string.IsNullOrEmpty(mensagemSucesso))
+        {
+            <div class="alert alert-success">
+                <strong>@mensagemSucesso</strong>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(mensagemAlerta))
+        {
+            <div class="alert alert-warning">
+                <strong>@mensagemAlerta</strong>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(mensagemErro))
+        {
+            <div class="alert alert-danger">
+                <strong>@mensagemErro</strong>
+            </div>
+        }
+
+        <EditForm Model="@viewModel" OnValidSubmit="@OnSubmit">
+
+            <DataAnnotationsValidator />
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label>Data de início:</label>
+                    <InputText type="datetime-local" class="form-control" @bind-Value=@viewModel.DataInicio />
+                    <div class="text-danger">
+                        <ValidationMessage For="@(() => viewModel.DataInicio)" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label>Data de fim:</label>
+                    <InputText type="datetime-local" class="form-control" @bind-Value=@viewModel.DataFim />
+                    <div class="text-danger">
+                        <ValidationMessage For="@(() => viewModel.DataFim)" />
+                    </div>
+
+                </div>
+                <div class="col-md-6">
+                    <input type="submit" class="btn btn-success mt-4"
+                           value="Pesquisar tarefas" />
+
+                </div>
+            </div>
+        </EditForm>
+
+        @if (tarefas.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Data e hora</th>
+                            <th>Nome da tarefa</th>
+                            <th>Prioridade</th>
+                            <th>Descrição</th>
+                            <th>Operações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in tarefas)
+                        {
+                            <tr>
+                                <td>@item.DataHora?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.Nome</td>
+                                <td>
+                                    @switch (item.Prioridade)
+                                    {
+                                        case 1:
+                                            <span class="badge bg-danger">ALTA</span>
+                                            break;
+                                        case 2:
+                                            <span class="badge bg-warning">MÉDIA</span>
+                                            break;
+                                        case 3:
+                                            <span class="badge bg-success">BAIXA</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@item.Descricao</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-2"
+                                            @onclick="(() => OnEdit(item.Id))">
+                                        Editar
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="(() => OnDelete(item.Id))">
+                                        Excluir
+                                    </button>
+
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5">
+                                Quantidade de tarefas: @tarefas.Count
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+@code {
+    private ConsultarTarefaViewModel viewModel = new ConsultarTarefaViewModel();
+    private List<TarefaResponse> tarefas = new List<TarefaResponse>();
+
+    private string mensagemSucesso = string.Empty;
+    private string mensagemAlerta = string.Empty;
+    private string mensagemErro = string.Empty;
+
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            mensagemSucesso = string.Empty;
+            mensagemAlerta = string.Empty;
+            mensagemErro = string.Empty;
+
+            var result = await Http.GetAsync($"{AppSettings.ApiAgenda}{viewModel.DataInicio}/{viewModel.DataFim}");
+            if (result.IsSuccessStatusCode)
+            {
+                tarefas = result.Content.ReadFromJsonAsync<List<TarefaResponse>>().Result;
+
+                if (tarefas.Any())
+                {
+                    mensagemSucesso = $"Consulta realizada com sucesso. {tarefas.Count} tarefa(s) obtida(s).";
+                }
+                else
+                {
+                    mensagemAlerta = "Nenhuma tarefa foi encontrada.";
+                }
+
+            }
+            else
+            {
+                var response = result.Content.ReadFromJsonAsync<ErrorResponse>().Result;
+                mensagemErro = response?.Message;
+            }
+
+        }
+        catch (Exception e)
+        {
+            mensagemErro = e.Message;
+        }
+    }
+
+    protected async Task OnDelete(Guid? id)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Deseja realmente excluir esta tarefa?");
+        if (confirmed)
+        {
+            try
+            {
+                var result = await Http.DeleteAsync(AppSettings.ApiAgenda + id);
+                if (result.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "TarefaExcluída com sucesso.");
+                    await OnSubmit();
+                }
+                else
+                {
+                    var response = result.Content.ReadFromJsonAsync<ErrorResponse>().Result;
+                    mensagemErro = response?.Message;
+                }
+            }
+            catch(Exception e)
+            {
+                mensagemErro = e.Message;
+            }
+        }
+    }
+
+    protected async Task OnEdit(Guid? id)
+    {
+        Navigation.NavigateTo($"editar-tarefa/{id}", true);
+    }
+}

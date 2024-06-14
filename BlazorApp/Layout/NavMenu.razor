@@ -1,4 +1,10 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using BlazorApp.Services
+
+@inject AuthService Auth
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">BlazorApp</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -9,16 +15,39 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Autenticar Usuário
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="criar-usuario">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Criar Usuário
-            </NavLink>
-        </div>
+
+          @if(isAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="criar-tarefa">
+                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Criar Tarefas
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="consultar-tarefas">
+                    <span class="bi bi-plus-square-fill-nav-menu"></span> Consultar Tarefas
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <a class="nav-link" @onclick="Logout">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Sair do Sistema
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Autenticar Usuário
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="criar-usuario">
+                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Criar Usuário
+                </NavLink>
+            </div>
+        }
+        
     </nav>
 </div>
 
@@ -30,5 +59,30 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private bool isAuthenticated = false;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var usuario = await Auth.GetData();
+        if (usuario != null)
+            isAuthenticated = true;
+        else
+            isAuthenticated = false;
+    }
+
+    private async Task Logout()
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Deseja realmente sair do sistema?");
+
+        if (confirmed)
+        {
+            await Auth.SignOut();
+
+            Navigation.NavigateTo("/", true);
+        }
     }
 }

@@ -3,6 +3,7 @@
 
 @using BlazorApp.Response
 @using BlazorApp.Responses
+@using BlazorApp.Settings
 @using BlazorApp.ViewModels
 
 @inject HttpClient Http
@@ -100,7 +101,7 @@
         try
         {
             //fazendo a chamada para o ENDPOINT de criação de usuário da API
-            var result = await Http.PostAsJsonAsync("criar", viewModel);
+            var result = await Http.PostAsJsonAsync(AppSettings.ApiUsuarios + "criar", viewModel);
             //verificando se a resposta obteve sucesso
             if (result.IsSuccessStatusCode)
             {

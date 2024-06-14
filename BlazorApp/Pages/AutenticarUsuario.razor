@@ -1,7 +1,15 @@
 ﻿@** Definir a rota desta página *@
 @page "/"
 
+@using BlazorApp.Response
+@using BlazorApp.Responses
+@using BlazorApp.Services
+@using BlazorApp.Settings
 @using BlazorApp.ViewModels
+
+@inject HttpClient Http
+@inject AuthService Auth
+@inject NavigationManager Navigation
 
 <div class="row">
     <div class="col-md-6 offset-md-3">
@@ -11,6 +19,13 @@
                     <h2>Autenticar Usuários</h2>
                     <p>Entre com as suas credenciais de acesso.</p>
                 </div>
+
+                @if (!string.IsNullOrEmpty(mensagemErro))
+                {
+                    <div class="alert alert-danger">
+                        <strong>@mensagemErro</strong>
+                        </div>
+                }
 
                 @** Componente de formulário do razor *@
                 <EditForm Model="@viewModel" OnValidSubmit="@OnSubmit">
@@ -52,12 +67,53 @@
 </div>
 
 @code {
-    //declarar a classe VIEWMODEL utilizada por esta página
     private AutenticarUsuarioViewModel viewModel = new AutenticarUsuarioViewModel();
+
+    //atributos
+    private string? mensagemErro;
+    //implementar a função para quando a página é carregada
+    protected override async Task OnInitializedAsync()
+    {
+        //verificando se o usuário já está autenticado
+        if (await Auth.GetData() != null)
+        {
+            Navigation.NavigateTo("/consultar-tarefas", true);
+        }
+    }
+
+
 
     //função para capturar o SUBMIT do formulário
     protected async Task OnSubmit()
     {
-        
+        try
+        {
+            //fazendo a requisição para a API
+            var result = await Http.PostAsJsonAsync
+            (AppSettings.ApiUsuarios + "autenticar", viewModel);
+
+            //verificando a resposta obtida da API (sucesso ou erro)
+            if (result.IsSuccessStatusCode)
+            {
+                //deserializar os dados obtidos da API
+                var usuario = result.Content.ReadFromJsonAsync
+                <AutenticarUsuarioResponse>().Result;
+                //salvar os dados do usuário autenticado na local storage
+                await Auth.SignIn(usuario.Response);
+                //redirecionar para a página de consulta de tarefas da API
+                Navigation.NavigateTo("/consultar-tarefas", true);
+            }
+            else
+            {
+                //lendo e exibindo mensagem de erro
+                var response = result.Content.ReadFromJsonAsync
+                <ErrorResponse>().Result;
+                mensagemErro = response?.Message;
+            }
+        }
+        catch (Exception e)
+        {
+            mensagemErro = e.Message;
+        }
     }
 }

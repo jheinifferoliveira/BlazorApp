@@ -1,0 +1,117 @@
+﻿@page "/criar-tarefa"
+@using BlazorApp.Response
+@using BlazorApp.Responses
+@using BlazorApp.Settings
+@using BlazorApp.ViewModels
+
+@inject HttpClient Http
+
+<div class="card m-3">
+    <div class="card-body">
+
+        <h2>Cadastro de tarefas</h2>
+        <p>Inclua tarefas em sua agenda.</p>
+
+        @if (!string.IsNullOrEmpty(mensagemSucesso))
+        {
+            <div class="alert alert-success">
+                <strong>@mensagemSucesso</strong>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(mensagemErro))
+        {
+            <div class="alert alert-danger">
+                <strong>@mensagemErro</strong>
+            </div>
+        }
+
+        <EditForm Model="@viewModel" OnValidSubmit="@OnSubmit">
+
+            <DataAnnotationsValidator />
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Nome da tarefa:</label>
+                    <InputText type="text" class="form-control" @bind-Value="viewModel.Nome" />
+                    <div class="text-danger">
+                        <ValidationMessage For="@(() => viewModel.Nome)" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label>Data e Hora:</label>
+                    <InputText type="datetime-local" class="form-control" @bind-Value="viewModel.DataHora" />
+                    <div class="text-danger">
+                        <ValidationMessage For="@(() => viewModel.DataHora)" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label>Prioridade:</label>
+                    <InputSelect class="form-select" @bind-Value="viewModel.Prioridade">
+                        <option value="">Escolha uma opção</option>
+                        <option value="1">ALTA</option>
+                        <option value="2">MÉDIA</option>
+                        <option value="3">BAIXA</option>
+                    </InputSelect>
+                    <div class="text-danger">
+                        <ValidationMessage For="@(() => viewModel.Prioridade)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <label>Descrição da tarefa:</label>
+                    <InputTextArea class="form-control" @bind-Value="viewModel.Descricao"></InputTextArea>
+                    <div class="text-danger">
+                        <ValidationMessage For="@(() => viewModel.Descricao)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <input type="submit" class="btn btn-success me-2" value="Realizar Cadastro" />
+                    <a href="/consultar-tarefas" class="btn btn-light">
+                        Ir para a página de consulta
+                    </a>
+                </div>
+            </div>
+
+        </EditForm>
+
+    </div>
+</div>
+
+@code {
+
+    private CriarTarefaViewModel viewModel = new CriarTarefaViewModel();
+
+    private string mensagemSucesso;
+    private string mensagemErro;
+
+    protected async Task OnSubmit()
+    {
+        try
+        {
+            mensagemSucesso = string.Empty;
+            mensagemErro = string.Empty;
+
+            var result = await Http.PostAsJsonAsync(AppSettings.ApiAgenda, viewModel);
+
+            if (result.IsSuccessStatusCode)
+            {
+                mensagemSucesso = "Tarefa cadastrada com sucesso!";
+                viewModel = new CriarTarefaViewModel();
+            }
+            else
+            {
+                var response = result.Content.ReadFromJsonAsync<ErrorResponse>().Result;
+                mensagemErro = response?.Message;
+            }
+        }
+        catch (Exception e)
+        {
+            mensagemErro = e.Message;
+        }
+    }
+}
